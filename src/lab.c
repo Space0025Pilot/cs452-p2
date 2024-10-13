@@ -1,60 +1,119 @@
+/**File: lab.c
+ * Author: Caitlyn Nelson
+ * Date: 10/08/2024
+ * Description: Definition of support functions used in main.c and implemented from lab.h
+ **/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdbool.h>
 #include "lab.h"
 #include "../tests/harness/unity.h"
 
+/* Variables */
+// queue_t* queue;
+// int currentSize = 0;
+// int maxCapacity = 0;
+// bool shutdownFlag = false;
+// pthread_cond_t queueNotEmpty;
+// pthread_cond_t queueNotFull;
+// pthread_mutex_t queueLock;
 
-/**
-     * @brief opaque type definition for a queue
-     */
-    typedef struct queue *queue_t;
 
-    /**
-     * @brief Initialize a new queue
-     *
-     * @param capacity the maximum capacity of the queue
-     * @return A fully initialized queue
-     */
-    queue_t queue_init(int capacity);
+typedef struct queue{
+  int currentSize;
+  int maxCapacity;
+  bool shutdownFlag;
+  pthread_cond_t queueNotEmpty;
+  pthread_cond_t queueNotFull;
+  pthread_mutex_t queueLock;
+} *queue_t;
 
-    /**
-     * @brief Frees all memory and related data signals all waiting threads.
-     *
-     * @param q a queue to free
-     */
-    void queue_destroy(queue_t q);
 
-    /**
-     * @brief Adds an element to the back of the queue
-     *
-     * @param q the queue
-     * @param data the data to add
-     */
-    void enqueue(queue_t q, void *data);
+queue_t queue_init(int capacity){
 
-    /**
-     * @brief Removes the first element in the queue.
-     *
-     * @param q the queue
-     */
-    void *dequeue(queue_t q);
+  queue_t queue = (queue_t)malloc(sizeof(queue_t) * 10);
+  queue->maxCapacity = capacity;
+  queue->shutdownFlag = false;
 
-    /**
-     * @brief Set the shutdown flag in the queue so all threads can
-     * complete and exit properly
-     *
-     * @param q The queue
-     */
-   void queue_shutdown(queue_t q);
+  pthread_cond_init (&(queue->queueNotEmpty), NULL);
+  pthread_cond_init (&(queue->queueNotFull), NULL);
 
-    /**
-     * @brief Returns true is the queue is empty
-     *
-     * @param q the queue
-     */
-    bool is_empty(queue_t q);
+  pthread_mutex_init (&(queue->queueLock), NULL);
 
-    /**
-     * @brief
-     *
-     * @param q The queue
-     */
-    bool is_shutdown(queue_t q);
+  return queue;
+}
+
+void queue_destroy(queue_t q){
+  free(q);
+}
+
+void enqueue(queue_t q, void *data){
+
+  pthread_mutex_lock(&(q->queueLock));
+  while(q->currentSize == q->maxCapacity && q->shutdownFlag == false){
+    //Queue Full so must wait
+    pthread_cond_wait(&(q->queueNotFull), &(q->queueLock));
+  }
+  if(q->shutdownFlag == true){
+    pthread_mutex_unlock(&(q->queueLock));
+    exit(0); //Not sure about this
+  }
+  q[q->currentSize] = *(queue_t)data;  //heap buffer overflow problem here, not sure how to add the data get some help with this.
+  q->currentSize++;
+  pthread_mutex_unlock(&(q->queueLock));
+}
+
+void *dequeue(queue_t q){
+  pthread_mutex_lock(&(q->queueLock));
+  while(q->currentSize == 0 && q->shutdownFlag == false){
+    //queue empty so wait for producer to produce items
+    pthread_cond_wait(&(q->queueNotEmpty), &(q->queueLock));
+  }
+  if(q->shutdownFlag == true && q->currentSize == 0){
+    pthread_mutex_unlock(&(q->queueLock));
+    exit(0);
+  }
+  int i = 0;
+  for(i = 0; i < q->currentSize - 1; i++){
+    q[i] = q[i+1];
+  }
+  q[i] = *(queue_t)NULL;
+  q->currentSize--;
+  pthread_mutex_unlock(&(q->queueLock));
+  return q;
+}
+
+void queue_shutdown(queue_t q){
+  pthread_mutex_lock(&(q->queueLock));
+  q->shutdownFlag = true;
+  pthread_mutex_unlock(&(q->queueLock));
+}
+
+bool is_empty(queue_t q){
+  bool empty;
+  pthread_mutex_lock(&(q->queueLock));
+  if(q->currentSize == 0){
+    empty = true;
+  }
+  else {
+    empty = false;
+  }
+  pthread_mutex_unlock(&(q->queueLock));
+  return empty;
+}
+
+bool is_shutdown(queue_t q){
+  bool shutdown;
+  pthread_mutex_lock(&(q->queueLock));
+  if(q->shutdownFlag == true){
+    shutdown = true;
+  }
+  else {
+    shutdown = false;
+  }
+  pthread_mutex_unlock(&(q->queueLock));
+  return shutdown;
+}
