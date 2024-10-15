@@ -41,7 +41,7 @@ static void *producer(void *args)
 {
 
      int num = *((int *)args);
-     //pthread_t tid = pthread_self();
+     // pthread_t tid = pthread_self();
      unsigned int seedp = 0;
      struct timespec s = {0, 0};
      int *itm = NULL;
@@ -49,6 +49,7 @@ static void *producer(void *args)
      // fprintf(stderr, "Producer thread: %ld - producing %d items\n", tid, num);
      for (int i = 0; i < num; i++)
      {
+          // printf("inside producer for loop");
           if (delay)
           {
                /*simulate producing the item*/
@@ -59,7 +60,9 @@ static void *producer(void *args)
           itm = (int *)malloc(sizeof(int));
           *itm = i;
           // Put the item into the queue
+          // printf("entering enqueue");
           enqueue(pc_queue, itm);
+          // printf("Back from enqueue");
 
           // Update counters for testing purposes
           pthread_mutex_lock(&numproduced.lock);
@@ -76,7 +79,7 @@ static void *producer(void *args)
 static void *consumer(void *args)
 {
      UNUSED(args);
-     //pthread_t tid = pthread_self();
+     // pthread_t tid = pthread_self();
      unsigned int seedp = 0;
      struct timespec s = {0, 0};
      int *itm = NULL;
@@ -90,7 +93,6 @@ static void *consumer(void *args)
                s.tv_nsec = (rand_r(&seedp) % MAX_SLEEP);
                nanosleep(&s, NULL);
           }
-
           itm = (int *)dequeue(pc_queue);
           if (itm)
           {
