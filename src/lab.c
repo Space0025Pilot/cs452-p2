@@ -35,12 +35,12 @@ typedef struct queue{
 
 queue_t queue_init(int capacity){
 
-  queue_t queue = (queue_t)malloc(sizeof(queue_t) * 10);
+  queue_t queue = (queue_t)malloc(sizeof(queue_t) * 100);
   queue->currentSize = 0;
   queue->maxCapacity = capacity;
   queue->shutdownFlag = false;
 
-  queue->arr = malloc(sizeof(void *) * 5);
+  queue->arr = malloc(sizeof(void *) * 100);
   
 
   pthread_cond_init (&(queue->queueNotEmpty), NULL);
@@ -80,11 +80,15 @@ void enqueue(queue_t q, void *data){
 void *dequeue(queue_t q){
   void *num;
   pthread_mutex_lock(&q->queueLock);
+  printf("Before while\n");
   while(q->currentSize == 0 && q->shutdownFlag == false){
+    printf("Inside while for wait\n");
     //queue empty so wait for producer to produce items
-    pthread_cond_wait(&q->queueNotEmpty, &q->queueLock);
+    pthread_cond_wait(&q->queueNotEmpty, &q->queueLock); //hang here
+    printf("After the wait\n");
   }
-  if(q->shutdownFlag == true || q->currentSize == 0){ //look into conditions here for the hang
+  if(q->shutdownFlag == true && q->currentSize == 0){
+    printf("Inside if where shutdown\n");
     pthread_mutex_unlock(&q->queueLock);
     return NULL;
   }
@@ -103,6 +107,7 @@ void *dequeue(queue_t q){
 void queue_shutdown(queue_t q){
   pthread_mutex_lock(&q->queueLock);
   q->shutdownFlag = true;
+  pthread_cond_broadcast(&q->queueNotFull);
   pthread_mutex_unlock(&q->queueLock);
 }
 
