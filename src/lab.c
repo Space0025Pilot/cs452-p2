@@ -59,34 +59,34 @@ void queue_destroy(queue_t q){
 
 void enqueue(queue_t q, void *data){
 
-  pthread_mutex_lock(&(q->queueLock));
+  pthread_mutex_lock(&q->queueLock);
   while(q->currentSize == q->maxCapacity && q->shutdownFlag == false){
     //Queue Full so must wait
-    pthread_cond_wait(&(q->queueNotFull), &(q->queueLock));
+    pthread_cond_wait(&q->queueNotFull, &q->queueLock);
   }
   if(q->shutdownFlag == true){
-    pthread_mutex_unlock(&(q->queueLock));
+    pthread_mutex_unlock(&q->queueLock);
     exit(0); //Not sure about this
   }
   int index = q->currentSize;
   // printf("Index: %d Data: %p", q->currentSize, data);
   q->arr[index] = data;
   q->currentSize++;
-  pthread_mutex_unlock(&(q->queueLock));
+  pthread_mutex_unlock(&q->queueLock);
 
-  pthread_cond_broadcast(&(q->queueNotEmpty));
+  pthread_cond_broadcast(&q->queueNotEmpty);
 }
 
 void *dequeue(queue_t q){
   void *num;
-  pthread_mutex_lock(&(q->queueLock));
+  pthread_mutex_lock(&q->queueLock);
   while(q->currentSize == 0 && q->shutdownFlag == false){
     //queue empty so wait for producer to produce items
-    pthread_cond_wait(&(q->queueNotEmpty), &(q->queueLock));
+    pthread_cond_wait(&q->queueNotEmpty, &q->queueLock);
   }
-  if(q->shutdownFlag == true && q->currentSize == 0){
-    pthread_mutex_unlock(&(q->queueLock));
-    exit(0);
+  if(q->shutdownFlag == true || q->currentSize == 0){ //look into conditions here for the hang
+    pthread_mutex_unlock(&q->queueLock);
+    return NULL;
   }
   int i = 0;
   num = q->arr[i];
@@ -95,39 +95,39 @@ void *dequeue(queue_t q){
   }
   q->arr[i] = NULL;
   q->currentSize--;
-  pthread_mutex_unlock(&(q->queueLock));
-  pthread_cond_broadcast(&(q->queueNotFull));
+  pthread_mutex_unlock(&q->queueLock);
+  pthread_cond_broadcast(&q->queueNotFull);
   return num;
 }
 
 void queue_shutdown(queue_t q){
-  pthread_mutex_lock(&(q->queueLock));
+  pthread_mutex_lock(&q->queueLock);
   q->shutdownFlag = true;
-  pthread_mutex_unlock(&(q->queueLock));
+  pthread_mutex_unlock(&q->queueLock);
 }
 
 bool is_empty(queue_t q){
   bool empty;
-  pthread_mutex_lock(&(q->queueLock));
+  pthread_mutex_lock(&q->queueLock);
   if(q->currentSize == 0){
     empty = true;
   }
   else {
     empty = false;
   }
-  pthread_mutex_unlock(&(q->queueLock));
+  pthread_mutex_unlock(&q->queueLock);
   return empty;
 }
 
 bool is_shutdown(queue_t q){
   bool shutdown;
-  pthread_mutex_lock(&(q->queueLock));
+  pthread_mutex_lock(&q->queueLock);
   if(q->shutdownFlag == true){
     shutdown = true;
   }
   else {
     shutdown = false;
   }
-  pthread_mutex_unlock(&(q->queueLock));
+  pthread_mutex_unlock(&q->queueLock);
   return shutdown;
 }

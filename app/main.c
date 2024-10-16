@@ -41,15 +41,15 @@ static void *producer(void *args)
 {
 
      int num = *((int *)args);
-     // pthread_t tid = pthread_self();
+     pthread_t tid = pthread_self();
      unsigned int seedp = 0;
      struct timespec s = {0, 0};
      int *itm = NULL;
 
-     // fprintf(stderr, "Producer thread: %ld - producing %d items\n", tid, num);
+     fprintf(stderr, "Producer thread: %ld - producing %d items\n", tid, num);
      for (int i = 0; i < num; i++)
      {
-          // printf("inside producer for loop");
+          printf("inside producer for loop\n");
           if (delay)
           {
                /*simulate producing the item*/
@@ -60,16 +60,16 @@ static void *producer(void *args)
           itm = (int *)malloc(sizeof(int));
           *itm = i;
           // Put the item into the queue
-          // printf("entering enqueue");
+          printf("Entering enqueue\n");
           enqueue(pc_queue, itm);
-          // printf("Back from enqueue");
+          printf("Back from enqueue\n");
 
           // Update counters for testing purposes
           pthread_mutex_lock(&numproduced.lock);
           numproduced.num++;
           pthread_mutex_unlock(&numproduced.lock);
      }
-     // fprintf(stderr, "Producer thread: %ld - Done producing!\n", tid);
+     fprintf(stderr, "Producer thread: %ld - Done producing!\n", tid);
      pthread_exit(NULL);
 }
 
@@ -79,21 +79,24 @@ static void *producer(void *args)
 static void *consumer(void *args)
 {
      UNUSED(args);
-     // pthread_t tid = pthread_self();
+     pthread_t tid = pthread_self();
      unsigned int seedp = 0;
      struct timespec s = {0, 0};
      int *itm = NULL;
-     // fprintf(stderr, "Consumer thread: %ld\n", tid);
+     fprintf(stderr, "Consumer thread: %ld\n", tid);
 
      while (true)
      {
+          printf("inside consumer loop\n");
           if (delay)
           {
                /*simulate producing the item*/
                s.tv_nsec = (rand_r(&seedp) % MAX_SLEEP);
                nanosleep(&s, NULL);
           }
+          printf("Before dequeue\n");
           itm = (int *)dequeue(pc_queue);
+          printf("Back from dequeue\n");
           if (itm)
           {
                free(itm);
@@ -116,7 +119,7 @@ static void *consumer(void *args)
                break;
           }
      }
-     // fprintf(stderr, "Consumer Thread: %ld - Done consuming!\n", tid);
+     fprintf(stderr, "Consumer Thread: %ld - Done consuming!\n", tid);
      pthread_exit(NULL);
 }
 
@@ -188,7 +191,7 @@ int main(int argc, char *argv[])
      {
           pthread_create(&consumers[i], NULL, consumer, (void *)NULL);
      }
-
+     //sleep(6); 
      /*Wait for all the the producer threads to finish*/
      for (int i = 0; i < nump; i++)
      {
