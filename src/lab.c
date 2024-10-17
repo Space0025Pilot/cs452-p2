@@ -73,23 +73,24 @@ void enqueue(queue_t q, void *data){
   q->arr[index] = data;
   q->currentSize++;
   pthread_mutex_unlock(&q->queueLock);
-
+  sleep(0);
   pthread_cond_broadcast(&q->queueNotEmpty);
 }
 
 void *dequeue(queue_t q){
   void *num;
   pthread_mutex_lock(&q->queueLock);
-  printf("Before while\n");
+  // printf("Before while\n");
   while(q->currentSize == 0 && q->shutdownFlag == false){
-    printf("Inside while for wait\n");
+    // printf("Inside while for wait\n");
     //queue empty so wait for producer to produce items
     pthread_cond_wait(&q->queueNotEmpty, &q->queueLock); //hang here
-    printf("After the wait\n");
+    // printf("After the wait\n");
   }
   if(q->shutdownFlag == true && q->currentSize == 0){
-    printf("Inside if where shutdown\n");
+    // printf("Inside if where shutdown\n");
     pthread_mutex_unlock(&q->queueLock);
+    // printf("After unlock in shutdown, right before return null\n");
     return NULL;
   }
   int i = 0;
@@ -100,6 +101,7 @@ void *dequeue(queue_t q){
   q->arr[i] = NULL;
   q->currentSize--;
   pthread_mutex_unlock(&q->queueLock);
+  sleep(0);
   pthread_cond_broadcast(&q->queueNotFull);
   return num;
 }
@@ -107,7 +109,9 @@ void *dequeue(queue_t q){
 void queue_shutdown(queue_t q){
   pthread_mutex_lock(&q->queueLock);
   q->shutdownFlag = true;
+  sleep(0);
   pthread_cond_broadcast(&q->queueNotFull);
+  pthread_cond_broadcast(&q->queueNotEmpty);
   pthread_mutex_unlock(&q->queueLock);
 }
 

@@ -49,7 +49,7 @@ static void *producer(void *args)
      fprintf(stderr, "Producer thread: %ld - producing %d items\n", tid, num);
      for (int i = 0; i < num; i++)
      {
-          printf("inside producer for loop\n");
+          // printf("inside producer for loop\n");
           if (delay)
           {
                /*simulate producing the item*/
@@ -60,9 +60,9 @@ static void *producer(void *args)
           itm = (int *)malloc(sizeof(int));
           *itm = i;
           // Put the item into the queue
-          printf("Entering enqueue\n");
+          // printf("Entering enqueue\n");
           enqueue(pc_queue, itm);
-          printf("Back from enqueue\n");
+          // printf("Back from enqueue\n");
 
           // Update counters for testing purposes
           pthread_mutex_lock(&numproduced.lock);
@@ -87,16 +87,16 @@ static void *consumer(void *args)
 
      while (true)
      {
-          printf("inside consumer loop\n");
+          // printf("inside consumer loop\n");
           if (delay)
           {
                /*simulate producing the item*/
                s.tv_nsec = (rand_r(&seedp) % MAX_SLEEP);
                nanosleep(&s, NULL);
           }
-          printf("Before dequeue\n");
+          // printf("Before dequeue\n");
           itm = (int *)dequeue(pc_queue);
-          printf("Back from dequeue\n");
+          // printf("Back from dequeue\n");
           if (itm)
           {
                free(itm);
